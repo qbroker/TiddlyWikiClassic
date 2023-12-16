@@ -142,7 +142,53 @@ function recreateOriginal()
 	return content;
 }
 
+// Save tiddlywiki (but not backup or anything else)
+tw.io.knownSaveMainFailures = {
+	failedToLoadOriginal: 1,
+	invalidFile: 2
+};
+
 // Save this tiddlywiki with the pending changes
+tw.io.saveMainAndReport = function(callback)
+{
+	var originalPath = document.location.toString();
+	var localPath = getLocalPath(originalPath);
+	var onLoadOriginal = function(original) {
+		if(original == null) {
+			alert(msg.cantSaveError);
+			if(store.tiddlerExists(msg.saveInstructions))
+				story.displayTiddler(null, msg.saveInstructions);
+
+			return callback(false, {
+				reason: tw.io.knownSaveMainFailures.failedToLoadOriginal
+			});
+		}
+
+		var posDiv = locateStoreArea(original);
+		if(!posDiv) {
+			alert(msg.invalidFileError.format([localPath]));
+
+			return callback(false, {
+				reason: tw.io.knownSaveMainFailures.invalidFile
+			});
+		}
+
+		config.saveByDownload = false;
+		config.saveByManualDownload = false;
+		// chkPreventAsyncSaving is checked inside saveMain
+		saveMain(localPath, original, posDiv, callback);
+	};
+
+	if(!config.options.chkPreventAsyncSaving) {
+		loadOriginal(localPath, onLoadOriginal);
+	} else {
+		// useful when loadOriginal is overwritten without support of callback
+		// or when an extension relies saveChanges being a sync function
+		var original = loadOriginal(localPath);
+		onLoadOriginal(original);
+	}
+};
+
 function saveChanges(onlyIfDirty, tiddlers)
 {
 	if(onlyIfDirty && !store.isDirty()) return;
@@ -157,26 +203,7 @@ function saveChanges(onlyIfDirty, tiddlers)
 		return;
 	}
 
-	var originalPath = document.location.toString();
-	var localPath = getLocalPath(originalPath);
-	var onLoadOriginal = function(original) {
-		if(original == null) {
-			alert(msg.cantSaveError);
-			if(store.tiddlerExists(msg.saveInstructions))
-				story.displayTiddler(null, msg.saveInstructions);
-			return;
-		}
-
-		var posDiv = locateStoreArea(original);
-		if(!posDiv) {
-			alert(msg.invalidFileError.format([localPath]));
-			return;
-		}
-
-		config.saveByDownload = false;
-		config.saveByManualDownload = false;
-		saveMain(localPath, original, posDiv);
-
+	tw.io.saveMainAndReport(function postSave() {
 		var co = config.options;
 		if (!config.saveByDownload && !config.saveByManualDownload) {
 			if(co.chkSaveBackups) saveBackup(localPath, original);
@@ -186,16 +213,7 @@ function saveChanges(onlyIfDirty, tiddlers)
 
 		if(co.chkDisplayInstrumentation)
 			displayMessage("saveChanges " + (new Date() - t0) + " ms");
-	};
-
-	if(!config.options.chkPreventAsyncSaving) {
-		loadOriginal(localPath, onLoadOriginal);
-	} else {
-		// useful when loadOriginal is overwritten without support of callback
-		// or when an extension relies saveChanges being a sync function
-		var original = loadOriginal(localPath);
-		onLoadOriginal(original);
-	}
+	});
 }
 
 function saveMain(localPath, original, posDiv, callback)
