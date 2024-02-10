@@ -387,8 +387,6 @@ tiddler: VisualTWServer.tid
 
 tiddler: WhatsNew.tid
 
-tiddler: Wii.tid
-
 tiddler: WikiOnAStick.tid
 
 tiddler: WikiTextContent.tid
@@ -408,8 +406,6 @@ tiddler: anotherTiddlerToTransclude.tid
 tiddler: closeAll%20macro.tid
 
 tiddler: example.tid
-
-tiddler: favicon.ico.tid
 
 tiddler: list%20macro.tid
 
